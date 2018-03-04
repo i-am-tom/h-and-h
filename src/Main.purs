@@ -34,7 +34,7 @@ foreign import doTheThing
        , ipfs :: IPFS
        | eff
        )
-     IPFSObject
+     Y
      Unit
 
 ipfsOnceReady :: forall eff. IPFSObject -> Aff (ipfs :: IPFS | eff) Unit
@@ -46,6 +46,21 @@ ipfsId = fromEffFnAff <<< ipfsIdImpl
 repo :: forall eff. Eff (random :: RANDOM | eff) String
 repo = map (\x -> "ipfs/yjs-demo/" <> show x) random
 
+---
+
+foreign import data Y :: Type
+
+foreign import data YConfig :: Type
+foreign import makeYConfig :: IPFSObject -> String -> YConfig
+
+foreign import setupYImpl
+  :: forall eff
+   . YConfig
+  -> EffFnAff (ipfs :: IPFS | eff) Y
+
+setupY :: forall eff. YConfig -> Aff (ipfs :: IPFS | eff) Y
+setupY = fromEffFnAff <<< setupYImpl
+
 main :: forall e. Eff (console :: CONSOLE, ipfs :: IPFS, random :: RANDOM | e) Unit
 main = launchAff_ do
   repoName <- liftEff' repo
@@ -53,6 +68,8 @@ main = launchAff_ do
 
   ipfsOnceReady ipfs'
   ipfsAddress <- ipfsId ipfs'
+  let yConfig = makeYConfig ipfs' "hardy-and-harding"
 
   liftEff' $ log ("IPFS node ready with address " <> ipfsAddress)
-  liftEff' (runEffFn1 doTheThing ipfs')
+  y <- setupY yConfig
+  liftEff' (runEffFn1 doTheThing y)

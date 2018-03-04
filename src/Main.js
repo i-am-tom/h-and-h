@@ -33,22 +33,32 @@ exports.ipfsIdImpl = function (ipfs) {
   };
 };
 
-exports.doTheThing = function (ipfs) {
-  Y({
-    db: {
-      name: 'memory'
-    },
-    connector: {
-      name: 'ipfs',
-      room: 'hardy-and-harding',
-      ipfs: ipfs
-    },
-    share: {
-      textfield: 'Text'
-    }
-  }).then(function (y) {
-    y.share.textfield.bind(
-      document.getElementById('textfield')
-    );
-  });
+exports.makeYConfig = function (ipfs) {
+  return function (room) {
+    return {
+      db: {
+        name: 'memory'
+      },
+      connector: {
+        name: 'ipfs',
+        room: room,
+        ipfs: ipfs
+      },
+      share: {
+        textfield: 'Text'
+      }
+    };
+  };
+};
+
+exports.setupYImpl = function (yConfig) {
+  return function (error, success) {
+    Y(yConfig).then(success).catch(error);
+  };
+};
+
+exports.doTheThing = function (y) {
+  y.share.textfield.bind(
+    document.getElementById('textfield')
+  );
 };
