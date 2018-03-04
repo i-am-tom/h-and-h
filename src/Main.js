@@ -57,8 +57,10 @@ exports.setupYImpl = function (yConfig) {
   };
 };
 
-exports.doTheThing = function (y) {
-  y.share.textfield.bind(
-    document.getElementById('textfield')
-  );
+exports.bindToTextField = function (y) {
+  return function (elem) {
+    return function () {
+      y.share.textfield.bind(elem);
+    };
+  };
 };
