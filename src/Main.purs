@@ -2,13 +2,12 @@ module Main where
 
 import Prelude
 
-import Control.Monad.Aff (Aff, Canceler, makeAff, launchAff_, liftEff')
+import Control.Monad.Aff (Aff, launchAff_, liftEff')
+import Control.Monad.Aff.Compat (EffFnAff, fromEffFnAff)
 import Control.Monad.Eff (Eff, kind Effect)
-import Control.Monad.Eff.Exception (Error)
 import Control.Monad.Eff.Uncurried (EffFn1, runEffFn1)
-import Control.Monad.Eff.Console (CONSOLE)
+import Control.Monad.Eff.Console (CONSOLE, log)
 import Control.Monad.Eff.Random (RANDOM, random)
-import Data.Either (Either(..))
 
 foreign import data IPFS :: Effect
 foreign import data IPFSObject :: Type
@@ -17,12 +16,15 @@ foreign import getIpfs
   :: String
   -> IPFSObject
 
+foreign import ipfsIdImpl
+  :: forall eff
+   . IPFSObject
+  -> EffFnAff (ipfs :: IPFS | eff) String
+
 foreign import ipfsOnceReadyImpl
-  :: forall a eff
-   . (forall x e. x -> Either e x)
-  -> IPFSObject
-  -> (Either Error a -> Eff eff Unit)
-  -> Eff eff (Canceler eff)
+  :: forall eff
+   . IPFSObject
+  -> EffFnAff (ipfs :: IPFS | eff) Unit
 
 foreign import doTheThing
   :: forall eff
@@ -36,7 +38,10 @@ foreign import doTheThing
      Unit
 
 ipfsOnceReady :: forall eff. IPFSObject -> Aff (ipfs :: IPFS | eff) Unit
-ipfsOnceReady = makeAff <<< ipfsOnceReadyImpl Right
+ipfsOnceReady = fromEffFnAff <<< ipfsOnceReadyImpl
+
+ipfsId :: forall eff. IPFSObject -> Aff (ipfs :: IPFS | eff) String
+ipfsId = fromEffFnAff <<< ipfsIdImpl
 
 repo :: forall eff. Eff (random :: RANDOM | eff) String
 repo = map (\x -> "ipfs/yjs-demo/" <> show x) random
@@ -46,5 +51,8 @@ main = launchAff_ do
   repoName <- liftEff' repo
   let ipfs' = getIpfs repoName
 
-  -- ipfsOnceReady ipfs'
+  ipfsOnceReady ipfs'
+  ipfsAddress <- ipfsId ipfs'
+
+  liftEff' $ log ("IPFS node ready with address " <> ipfsAddress)
   liftEff' (runEffFn1 doTheThing ipfs')

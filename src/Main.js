@@ -15,44 +15,40 @@ exports.getIpfs = function (repo) {
   });
 };
 
-exports.ipfsOnceReadyImpl = function(right) {
-  return function(ipfs) {
-    return function(cb) {
-      return function() {
-        ipfs.once('ready', function() {
-          cb(right({}));
-        });
+exports.ipfsOnceReadyImpl = function (ipfs) {
+  return function (error, success) {
+    ipfs.once('ready', success);
+  };
+};
 
-        return function() {};
-      };
-    };
+exports.ipfsIdImpl = function (ipfs) {
+  return function (error, success) {
+    ipfs.id(function (err, info) {
+      if (err) {
+        error(err);
+      }
+
+      success(info.id);
+    });
   };
 };
 
 exports.doTheThing = function (ipfs) {
-  ipfs.once('ready', function () {
-    return ipfs.id(function (err, info) {
-      if (err) { throw err; }
-
-      console.log('IPFS node ready with address ' + info.id);
-
-      Y({
-        db: {
-          name: 'memory'
-        },
-        connector: {
-          name: 'ipfs',
-          room: 'hardy-and-harding',
-          ipfs: ipfs
-        },
-        share: {
-          textfield: 'Text'
-        }
-      }).then(function (y) {
-        y.share.textfield.bind(
-          document.getElementById('textfield')
-        );
-      });
-    });
+  Y({
+    db: {
+      name: 'memory'
+    },
+    connector: {
+      name: 'ipfs',
+      room: 'hardy-and-harding',
+      ipfs: ipfs
+    },
+    share: {
+      textfield: 'Text'
+    }
+  }).then(function (y) {
+    y.share.textfield.bind(
+      document.getElementById('textfield')
+    );
   });
 };
